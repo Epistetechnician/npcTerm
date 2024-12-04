@@ -174,8 +174,23 @@ interface Provider {
 
 const ApiDocs = () => {
   const [activeTab, setActiveTab] = useState('overview')
-  // Update the state type to use Provider['id'] instead of Provider
-  const [selectedProvider, setSelectedProvider] = useState<Provider['id']>(''); // or set a default provider ID
+  const [selectedProvider, setSelectedProvider] = useState<string>('') // Change to string type
+
+  // Add providers array
+  const providers: Provider[] = [
+    { id: 'defillama', name: 'DefiLlama' },
+    { id: 'dune', name: 'Dune Analytics' },
+    { id: 'footprint', name: 'Footprint Analytics' },
+    { id: 'flipside', name: 'Flipside Crypto' },
+    { id: 'messari', name: 'Messari' },
+    { id: 'bitquery', name: 'BitQuery' },
+    { id: 'subgraphs', name: 'The Graph' }
+  ]
+
+  // Handle provider change
+  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedProvider(e.target.value)
+  }
 
   // Handle navigation
   const handleNavigation = (sectionId: string) => {
@@ -2419,7 +2434,6 @@ class DataValidator {
   ] as const
   type DataSource = typeof dataSources[number]
 
-  // Update the select element
   return (
     <div className="flex min-h-screen">
       <SideNav 
@@ -2429,6 +2443,21 @@ class DataValidator {
       />
 
       <div className="flex-1 p-8">
+        <div className="mb-6">
+          <select
+            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500"
+            value={selectedProvider}
+            onChange={handleProviderChange}
+          >
+            <option value="">Select a provider</option>
+            {providers.map(provider => (
+              <option key={provider.id} value={provider.id}>
+                {provider.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <Tabs activeTab={activeTab}>
           {/* Render all sections dynamically */}
           {sections.flatMap(section => 
