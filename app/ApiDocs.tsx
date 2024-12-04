@@ -165,8 +165,16 @@ interface ContentType {
   [key: string]: OverviewContent | DataSourceContent | AuthenticationContent | RateLimitsContent | GuidesContent | GuideContent
 }
 
+// First, let's define the Provider type if not already defined
+interface Provider {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 const ApiDocs = () => {
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedProvider, setSelectedProvider] = useState<Provider['id']>(''); // or default provider id
 
   // Handle navigation
   const handleNavigation = (sectionId: string) => {
