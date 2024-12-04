@@ -1470,6 +1470,7 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
         );
 
       case 'success':
+        // First handle NFT sales case
         if (entry.metadata?.type === 'nft_sales') {
           return (
             <div className="my-4 space-y-4">
@@ -1482,60 +1483,69 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
             </div>
           );
         }
+
+        // Then handle API response case
+        if (entry.metadata?.type === 'api-response') {
+          return (
+            <div className="my-2 p-4 bg-gray-800/50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-purple-400 font-medium">{entry.content}</span>
+                {entry.metadata?.timestamp && (
+                  <span className="text-gray-500 text-sm">
+                    {new Date(entry.metadata.timestamp).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                {entry.data && (
+                  <>
+                    <div>
+                      <span className="text-gray-400">Endpoint:</span>
+                      <span className="ml-2 text-green-400">{entry.data.endpoint}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Method:</span>
+                      <span className="ml-2 text-blue-400">{entry.data.method}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Status:</span>
+                      <span className={`ml-2 ${
+                        entry.data.status >= 200 && entry.data.status < 300 
+                          ? 'text-green-400' 
+                          : 'text-red-400'
+                      }`}>
+                        {entry.data.status}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+              {entry.data?.params && Object.keys(entry.data.params).length > 0 && (
+                <div className="mb-4">
+                  <div className="text-gray-400 mb-1">Parameters:</div>
+                  <pre className="bg-black/30 p-2 rounded">
+                    {JSON.stringify(entry.data.params, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {entry.data?.response && (
+                <div>
+                  <div className="text-gray-400 mb-1">Response:</div>
+                  <pre className="bg-black/30 p-2 rounded overflow-auto max-h-96">
+                    {JSON.stringify(entry.data.response, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // Default success case
         return (
           <pre className="whitespace-pre-wrap font-mono" suppressHydrationWarning>
             {entry.content}
           </pre>
         );
-
-      if (entry.metadata?.type === 'api-response') {
-        return (
-          <div className="my-2 p-4 bg-gray-800/50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-purple-400 font-medium">{entry.content}</span>
-              {entry.metadata?.timestamp && (
-                <span className="text-gray-500 text-sm">
-                  {new Date(entry.metadata.timestamp).toLocaleTimeString()}
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-              <div>
-                <span className="text-gray-400">Endpoint:</span>
-                <span className="ml-2 text-green-400">{entry.data.endpoint}</span>
-              </div>
-              <div>
-                <span className="text-gray-400">Method:</span>
-                <span className="ml-2 text-blue-400">{entry.data.method}</span>
-              </div>
-              <div>
-                <span className="text-gray-400">Status:</span>
-                <span className={`ml-2 ${
-                  entry.data.status >= 200 && entry.data.status < 300 
-                    ? 'text-green-400' 
-                    : 'text-red-400'
-                }`}>
-                  {entry.data.status}
-                </span>
-              </div>
-            </div>
-            {entry.data.params && Object.keys(entry.data.params).length > 0 && (
-              <div className="mb-4">
-                <div className="text-gray-400 mb-1">Parameters:</div>
-                <pre className="bg-black/30 p-2 rounded">
-                  {JSON.stringify(entry.data.params, null, 2)}
-                </pre>
-              </div>
-            )}
-            <div>
-              <div className="text-gray-400 mb-1">Response:</div>
-              <pre className="bg-black/30 p-2 rounded overflow-auto max-h-96">
-                {JSON.stringify(entry.data.response, null, 2)}
-              </pre>
-            </div>
-          </div>
-        );
-      }
 
       // ... existing cases ...
     }

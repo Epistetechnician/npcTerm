@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { processAllDocs, getDocsByCategory, getDocsByType } from '../../utils/docProcessor';
 import { Book, Code, Database, FileText, GitBranch, Terminal } from 'lucide-react';
 
 interface DocState {
@@ -18,20 +17,7 @@ export default function DocsPage() {
     activeCategory: 'All',
     activeType: 'all'
   });
-
-  useEffect(() => {
-    loadDocs();
-  }, []);
-
-  async function loadDocs() {
-    try {
-      const docs = await processAllDocs();
-      setState(prev => ({ ...prev, docs, loading: false }));
-    } catch (error) {
-      console.error('Error loading docs:', error);
-    }
-  }
-
+  
   const categories = ['All', 'DeFi', 'Analytics', 'GraphQL', 'NFTs', 'Infrastructure'];
   const types = [
     { id: 'all', label: 'All', icon: FileText },
@@ -43,14 +29,7 @@ export default function DocsPage() {
   const filteredDocs = React.useMemo(() => {
     let filtered = { ...state.docs };
     
-    if (state.activeCategory !== 'All') {
-      filtered = getDocsByCategory(filtered, state.activeCategory);
-    }
-    
-    if (state.activeType !== 'all') {
-      filtered = getDocsByType(filtered, state.activeType as 'api' | 'guide' | 'reference');
-    }
-    
+ 
     return filtered;
   }, [state.docs, state.activeCategory, state.activeType]);
 
