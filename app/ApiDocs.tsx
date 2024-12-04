@@ -174,7 +174,7 @@ interface Provider {
 
 const ApiDocs = () => {
   const [activeTab, setActiveTab] = useState('overview')
-  const [selectedProvider, setSelectedProvider] = useState<string>('') // Change to string type
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('')
 
   // Add providers array
   const providers: Provider[] = [
@@ -188,8 +188,8 @@ const ApiDocs = () => {
   ]
 
   // Handle provider change
-  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedProvider(e.target.value)
+  const handleProviderChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedProviderId(event.target.value)
   }
 
   // Handle navigation
@@ -2446,11 +2446,11 @@ class DataValidator {
         <div className="mb-6">
           <select
             className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500"
-            value={selectedProvider}
+            value={selectedProviderId}
             onChange={handleProviderChange}
           >
             <option value="">Select a provider</option>
-            {providers.map(provider => (
+            {providers.map((provider) => (
               <option key={provider.id} value={provider.id}>
                 {provider.name}
               </option>
