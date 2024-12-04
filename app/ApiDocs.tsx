@@ -174,7 +174,8 @@ interface Provider {
 
 const ApiDocs = () => {
   const [activeTab, setActiveTab] = useState('overview')
-  const [selectedProvider, setSelectedProvider] = useState<Provider['id']>(''); // or default provider id
+  // Update the state type to use Provider['id'] instead of Provider
+  const [selectedProvider, setSelectedProvider] = useState<Provider['id']>(''); // or set a default provider ID
 
   // Handle navigation
   const handleNavigation = (sectionId: string) => {
@@ -2267,8 +2268,6 @@ const client = new DuneClient({
         await this.wait(attempt);
       }
     }
-    throw new Error('Max retries exceeded');
-  }
 
   private shouldRetry(error: any, attempt: number, retryable?: boolean): boolean {
     return (
@@ -2420,6 +2419,7 @@ class DataValidator {
   ] as const
   type DataSource = typeof dataSources[number]
 
+  // Update the select element
   return (
     <div className="flex min-h-screen">
       <SideNav 
