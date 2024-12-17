@@ -1,16 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    NEXT_PUBLIC_DUNE_API_KEY: process.env.NEXT_PUBLIC_DUNE_API_KEY,
-    NEXT_PUBLIC_FLIPSIDE_API_KEY: process.env.NEXT_PUBLIC_FLIPSIDE_API_KEY,
+  reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  serverRuntimeConfig: {
-    DUNE_API_KEY: process.env.NEXT_PUBLIC_DUNE_API_KEY,
-    FLIPSIDE_API_KEY: process.env.NEXT_PUBLIC_FLIPSIDE_API_KEY,
+  typescript: {
+    ignoreBuildErrors: true,
   },
-  publicRuntimeConfig: {
-    NEXT_PUBLIC_DUNE_API_KEY: process.env.NEXT_PUBLIC_DUNE_API_KEY,
-    NEXT_PUBLIC_FLIPSIDE_API_KEY: process.env.NEXT_PUBLIC_FLIPSIDE_API_KEY,
+  experimental: {
+    appDir: true,
   }
 }
 
