@@ -179,6 +179,17 @@ export default function ApiDocs() {
     { id: 'graph', name: 'The Graph' }
   ];
 
+  // Update the state setters and handlers with proper types
+  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newProvider = e.target.value as Provider;
+    setSelectedProvider(newProvider);
+  };
+
+  const handleSectionChange = (newSection: string) => {
+    const validSection = newSection as Section;
+    setActiveSection(validSection);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black">
       {/* Hero Section */}
@@ -212,7 +223,7 @@ export default function ApiDocs() {
           <select
             className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500"
             value={selectedProvider}
-            onChange={(e) => setSelectedProvider(e.target.value)}
+            onChange={handleProviderChange}
           >
             {providers.map(provider => (
               <option key={provider.id} value={provider.id}>
@@ -232,7 +243,7 @@ export default function ApiDocs() {
               {sections.map(section => (
                 <button
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => handleSectionChange(section.id)}
                   className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg ${
                     activeSection === section.id
                       ? 'bg-purple-500/20 text-purple-400'

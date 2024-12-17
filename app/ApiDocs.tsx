@@ -162,6 +162,7 @@ interface ContentType {
   nfts: DataSourceContent
   eigenlayer: DataSourceContent
   'best-practices': GuideContent
+  hypurrscan: DataSourceContent
   [key: string]: OverviewContent | DataSourceContent | AuthenticationContent | RateLimitsContent | GuidesContent | GuideContent
 }
 
@@ -184,7 +185,8 @@ const ApiDocs = () => {
     { id: 'flipside', name: 'Flipside Crypto' },
     { id: 'messari', name: 'Messari' },
     { id: 'bitquery', name: 'BitQuery' },
-    { id: 'subgraphs', name: 'The Graph' }
+    { id: 'subgraphs', name: 'The Graph' },
+    { id: 'hypurrscan', name: 'Hypurrscan', description: 'Hyperliquid L1 Analytics & Data' }
   ]
 
   // Handle provider change
@@ -216,7 +218,8 @@ const ApiDocs = () => {
         { id: 'flipside', label: 'Flipside Crypto' },
         { id: 'messari', label: 'Messari' },
         { id: 'bitquery', label: 'BitQuery' },
-        { id: 'subgraphs', label: 'The Graph' }
+        { id: 'subgraphs', label: 'The Graph' },
+        { id: 'hypurrscan', label: 'Hypurrscan', description: 'Hyperliquid L1 Analytics & Data' }
       ]
     },
     {
@@ -2416,6 +2419,111 @@ class DataValidator {
 }`
         }
       ]
+    },
+    hypurrscan: {
+      title: 'Hypurrscan API Integration',
+      description: 'Access comprehensive Hyperliquid L1 data through Hypurrscan\'s API. Get real-time trading metrics, positions, liquidations, and historical data across all markets.',
+      features: [
+        'Real-time market data and trading metrics',
+        'Historical position and liquidation data',
+        'Market depth and orderbook analytics',
+        'Trader statistics and leaderboards',
+        'Cross-market analytics and correlations',
+        'WebSocket support for live updates'
+      ],
+      endpoints: [
+        {
+          name: 'Market Overview',
+          method: 'GET',
+          path: '/v1/hyperliquid/markets',
+          description: 'Get current market data for all trading pairs',
+          response: {
+            description: 'Returns detailed market information including prices, volumes, and funding rates',
+            example: `{
+  "markets": [
+    {
+      "symbol": "BTC-USDC",
+      "price": "65432.50",
+      "volume24h": "1234567.89",
+      "openInterest": "98765.43",
+      "fundingRate": "0.0001"
+    }
+  ]
+}`
+          },
+          example: 'curl https://api.hypurrscan.io/v1/hyperliquid/markets'
+        },
+        {
+          name: 'Token Holders',
+          method: 'GET',
+          path: '/v1/hyperliquid/holders/{token}',
+          params: [
+            {
+              name: 'token',
+              type: 'string',
+              required: true,
+              description: 'Token symbol'
+            }
+          ],
+          description: 'Fetch current holders for a specific token',
+          example: "curl -X 'GET' \ 'https://api.hypurrscan.io/holders/PURR' \ -H 'accept: application/json' "
+        },
+        {
+          name: 'Trader Positions',
+          method: 'GET',
+          path: '/v1/hyperliquid/positions/{address}',
+          params: [
+            {
+              name: 'address',
+              type: 'string',
+              required: true,
+              description: 'Trader wallet address'
+            }
+          ],
+          description: 'Fetch current positions for a specific trader',
+          example: 'curl https://api.hypurrscan.io/v1/hyperliquid/positions/0x1234...'
+        },
+        {
+          name: 'Recent Liquidations',
+          method: 'GET',
+          path: '/v1/hyperliquid/liquidations',
+          params: [
+            {
+              name: 'timeframe',
+              type: 'string',
+              required: false,
+              description: 'Time range (1h, 24h, 7d)'
+            }
+          ],
+          description: 'Get recent liquidation events across all markets',
+          example: 'curl https://api.hypurrscan.io/v1/hyperliquid/liquidations?timeframe=24h'
+        }
+      ],
+      authentication: {
+        type: 'API Key',
+        details: 'API key required for enhanced rate limits and additional endpoints',
+        example: 'curl -H "X-API-Key: your_api_key" https://api.hypurrscan.io/v1/hyperliquid/markets'
+      },
+      sdkExample: {
+        title: 'Hypurrscan SDK Usage',
+        description: 'Example implementation using the Hypurrscan TypeScript SDK',
+        code: `import { HypurrscanClient } from '@hypurrscan/sdk';
+
+const client = new HypurrscanClient({
+  apiKey: process.env.HYPURRSCAN_API_KEY
+});
+
+// Fetch market data
+const markets = await client.markets.getAll();
+
+// Stream live trades
+client.ws.trades({
+  symbols: ['BTC-USDC', 'ETH-USDC'],
+  onData: (trade) => {
+    console.log('New trade:', trade);
+  }
+});`
+      }
     }
   }
 

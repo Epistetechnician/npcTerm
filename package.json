@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.47.5",
     "csv-stringify": "^6.4.5",
     "fs": "^0.0.1-security",
     "gray-matter": "^4.0.3",

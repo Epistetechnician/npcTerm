@@ -1,7 +1,6 @@
 'use client'
 
 import CabalTerminal from './agent'
-import ApiPlayground from './components/ApiPlayground'
 
 export default function Home() {
   return (
@@ -9,9 +8,6 @@ export default function Home() {
       <div className="w-full max-w-[90vw] xl:max-w-[80vw]">
         <CabalTerminal />
       </div>
-      <div className="container mx-auto py-8">
-      <ApiPlayground />
-    </div>
     </main>
   )
 }

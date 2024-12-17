@@ -18,16 +18,27 @@ import { getApiKeys } from '../utils/env';
 import { validateConfig } from '../config/env';
 
 interface HistoryEntry {
-  type: 'system' | 'user' | 'error' | 'ascii' | 'success' | 'chart' | 'link' | 'metric' | 'analytics' | 'protocol' | 'defi';
-  content: string;
-  data?: any; // For chart data
-  links?: {url: string, title: string}[];
-  metrics?: {
+  type: 'system' | 'user' | 'error' | 'ascii' | 'success' | 'chart' | 'link' | 'metric' | 'analytics' | 'protocol' | 'defi' | 'database' | 'table' | 'warning';
+  content?: string;
+  data?: any;
+  metrics?: Array<{
     label: string;
-    value: string;
+    value: string | number;
     change?: string;
     trend?: 'up' | 'down' | 'neutral';
-  }[];
+  }>;
+  links?: Array<{
+    url: string;
+    title: string;
+  }>;
+  tableData?: {
+    columns: string[];
+    rows: any[];
+    summary?: {
+      total: number;
+      timestamp: string;
+    };
+  };
   analytics?: {
     source: string;
     metrics: {
@@ -123,6 +134,9 @@ interface Commands {
   'api-help': () => HistoryEntry;
   'test-endpoint': (context: CommandContext) => Promise<HistoryEntry>;
   'list-endpoints': (context: CommandContext) => HistoryEntry;
+  'ingest-api': (context: CommandContext) => Promise<HistoryEntry>;
+  curl: (context: CommandContext) => Promise<HistoryEntry>;
+  'visualize-data': (context: CommandContext) => Promise<HistoryEntry>;
 }
 
 // Add new interface for command suggestions
@@ -212,11 +226,11 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 ];
 
 const ASCII_LOGO = `
-     █████╗ ██╗ ██████╗ █████╗ ██████╗  █████╗  ██╗     
+     █████╗ ██╗ ██████╗ █████╗ ██████  █████╗  ██╗     
     ██╔══██╗██║██╔════╝██╔══██╗██╔══██╗██╔══██╗ ██║     
-    ███████║██║██║     ███████║██████╔╝███████║ ██║                
+    ███████║█║██║     ███████║██████╔╝███████║ ██║                
     ██╔══██║██║██║     ██╔══██║██╔══██╗██╔══██║ ██║     
-    ██║  ██║██║╚██████╗██║  ██║██████╔╝██║  ██║     
+    ██║  ██║██║╚█████╗██║  ██║█████╔╝██║  ██║     
     ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝ ╚╝
 `
 
@@ -287,18 +301,94 @@ function formatDate(date: Date): string {
 // Update the getApiKeys function to handle errors gracefully
 function getApiKeysWithFallback() {
   try {
+    const dune = process.env.NEXT_PUBLIC_DUNE_API_KEY;
+    const flipside = process.env.NEXT_PUBLIC_FLIPSIDE_API_KEY;
+    
+    // Return empty strings if keys are missing instead of throwing
     return {
-      dune: getRequiredEnvVar('NEXT_PUBLIC_DUNE_API_KEY'),
-      flipside: getRequiredEnvVar('NEXT_PUBLIC_FLIPSIDE_API_KEY')
+      dune: dune || '',
+      flipside: flipside || ''
     };
   } catch (error) {
-    console.error('Failed to load API keys:', error);
+    console.warn('API keys not configured:', error);
     return {
-      dune: process.env.DUNE_API_KEY || '',
-      flipside: process.env.FLIPSIDE_API_KEY || ''
+      dune: '',
+      flipside: ''
     };
   }
 }
+
+// Add these interfaces near the top with other interfaces
+interface ApiResponse {
+  success: boolean;
+  data: any;
+  error?: string;
+}
+
+// Add the processCurlCommand function before the CabalTerminal component
+const processCurlCommand = async (curlCommand: string): Promise<ApiResponse> => {
+  try {
+    const urlMatch = curlCommand.match(/'https?:\/\/[^']+'/);
+    const headerMatch = curlCommand.match(/-H\s+'([^']+)'/g);
+    
+    if (!urlMatch) {
+      throw new Error('No valid URL found in curl command');
+    }
+
+    const url = urlMatch[0].replace(/'/g, '');
+    const headers: Record<string, string> = {};
+    
+    // Process all headers
+    headerMatch?.forEach(match => {
+      const headerParts = match.match(/-H\s+'([^:]+):\s*([^']+)'/);
+      if (headerParts) {
+        const [_, key, value] = headerParts;
+        headers[key] = value.trim();
+      }
+    });
+
+    // Add CORS proxy for external APIs
+    const proxyUrl = process.env.NEXT_PUBLIC_CORS_PROXY || 'https://cors-anywhere.herokuapp.com/';
+    const finalUrl = url.startsWith('http') ? `${proxyUrl}${url}` : url;
+
+    // Make the request
+    const response = await fetch(finalUrl, {
+      method: 'GET',
+      headers: {
+        ...headers,
+        'Accept': 'application/json',
+        'Origin': window.location.origin
+      },
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+// Update the data mapping with proper type annotations
+const formatTableData = (data: Record<string, unknown>[]) => {
+  return {
+    columns: Object.keys(data[0] || {}),
+    rows: data.map((item: Record<string, unknown>) => Object.values(item)),
+    summary: {
+      total: data.length,
+      timestamp: new Date().toISOString()
+    }
+  };
+};
 
 const CabalTerminal = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([
@@ -331,12 +421,23 @@ const CabalTerminal = () => {
       
       await new Promise(resolve => setTimeout(resolve, 1000))
       setNetworkStatus('CONNECTED')
+
+      // Check API keys
+      const apiKeys = getApiKeysWithFallback();
+      const missingKeys: string[] = [];
+      if (!apiKeys.dune) missingKeys.push('DUNE');
+      if (!apiKeys.flipside) missingKeys.push('FLIPSIDE');
+
       setHistory(prev => [
         ...prev,
-        { type: 'success', content: 'SYSTEM INITIALIZED' },
-        { type: 'system', content: 'Welcome to aicaba! terminal v1.0.0' },
-        { type: 'system', content: 'Type "help" for available commands' }
-      ])
+        { type: 'success' as const, content: 'SYSTEM INITIALIZED' },
+        { type: 'system' as const, content: 'Welcome to aicaba! terminal v1.0.0' },
+        ...(missingKeys.length > 0 ? [{
+          type: 'warning' as const,
+          content: `Note: ${missingKeys.join(', ')} API keys not configured. Some features may be limited.`
+        }] : []),
+        { type: 'system' as const, content: 'Type "help" for available commands' }
+      ] as HistoryEntry[]);
       
       setCabalState(prev => ({ ...prev, isInitialized: true }))
     }
@@ -656,9 +757,9 @@ Type 'help' to see available commands.
         return {
           type: 'system',
           content: `
-╔════════════════════════════════════════╗
+╔═══════════════════════════════���════════╗
 ║         PROPOSAL CREATION WIZARD       ║
-╚════════════════════════════════════════╝
+╚══════════��═════════════════════════════╝
 
 Enter proposal title:
 
@@ -693,7 +794,7 @@ Tips:
       return {
         type: 'system',
         content: `
-╔════════════════════════════════════════╗
+╔════════════���══════════════���══════���═════╗
 ║         AGENT INFORMATION              ║
 ╚════════════════════════════════════════╝
 
@@ -738,7 +839,7 @@ Metrics:
         content: `
 ╔═══════════════════════════════════════╗
 ║         TREASURY OVERVIEW              ║
-╚════════════════════════════════════════╝
+╚══════════════════════════════════════╝
 
 DAO Tokens: ${treasury.daoTokens}
 PUMP Tokens: ${treasury.pumpTokens}
@@ -1207,6 +1308,91 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
           content: `API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`
         };
       }
+    },
+
+    'ingest-api': async (context: CommandContext) => {
+      // Implement API data ingestion logic here
+      // For now, return a placeholder response
+      return {
+        type: 'system',
+        content: 'API data ingestion logic not implemented yet'
+      };
+    },
+
+    // Add new command for handling curl requests
+    'curl': async (context: CommandContext) => {
+      const curlCommand = context.args.join(' ');
+      
+      if (!curlCommand) {
+        return {
+          type: 'error',
+          content: 'Please provide a curl command'
+        };
+      }
+
+      try {
+        const result = await processCurlCommand(curlCommand);
+        
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+
+        const db = await connectToDatabase();
+        const data = Array.isArray(result.data) ? result.data : [result.data];
+        
+        const createTableSQL = createTableSchema(data);
+        await db.query(createTableSQL, []);
+
+        return {
+          type: 'database',
+          content: 'API Data Ingested Successfully',
+          tableData: formatTableData(data)
+        };
+
+      } catch (error) {
+        return {
+          type: 'error',
+          content: `Failed to process curl command: ${error instanceof Error ? error.message : 'Unknown error'}`
+        };
+      }
+    },
+
+    // Add visualization helper
+    'visualize-data': async (context: CommandContext) => {
+      const [dataType] = context.args;
+      
+      if (!dataType) {
+        return {
+          type: 'error',
+          content: 'Please specify data type to visualize'
+        };
+      }
+
+      try {
+        // Fetch latest data from database
+        const db = await connectToDatabase();
+        // Mock data for demonstration
+        const mockData = [
+          { label: 'Sample 1', value: 100 },
+          { label: 'Sample 2', value: 200 },
+          { label: 'Sample 3', value: 150 }
+        ];
+        
+        // Generate visualization with actual data
+        const chartData = generateVisualization(mockData);
+
+        return {
+          type: 'chart',
+          content: `${dataType} Visualization`,
+          data: chartData
+        };
+
+      } catch (error) {
+        return {
+          type: 'error',
+          content: `Failed to generate visualization: ${error instanceof Error ? error.message : 'Unknown error'}`
+        };
+      }
     }
   }
 
@@ -1547,8 +1733,97 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
           </pre>
         );
 
+      case 'database':
+        return (
+          <div className="my-4 space-y-4">
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-purple-400">Database Operation</h3>
+                {entry.tableData?.summary && (
+                  <span className="text-sm text-gray-400">
+                    {entry.tableData.summary.total} records • 
+                    {new Date(entry.tableData.summary.timestamp).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-700">
+                  <thead>
+                    <tr>
+                      {entry.tableData?.columns.map((col, i) => (
+                        <th key={i} className="px-4 py-2 text-left text-gray-400">
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {entry.tableData?.rows.map((row, i) => (
+                      <tr key={i}>
+                        {Object.values(row).map((cell: any, j) => (
+                          <td key={j} className="px-4 py-2 text-gray-300">
+                            {typeof cell === 'number' ? 
+                              new Intl.NumberFormat().format(cell) : 
+                              cell.toString()}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+
       // ... existing cases ...
     }
+  };
+
+  // Add database connection utility
+  const connectToDatabase = async () => {
+    // In a real implementation, you'd use your preferred database library
+    // This is a mock implementation for demonstration
+    return {
+      async query(sql: string, params: any[]) {
+        console.log('Executing query:', sql, params);
+        return true;
+      }
+    };
+  };
+
+  // Add function to create table schema
+  const createTableSchema = (data: any) => {
+    const columns = Object.keys(data[0] || {}).map(key => {
+      const value = data[0][key];
+      const type = typeof value === 'number' ? 'NUMERIC' :
+                   typeof value === 'boolean' ? 'BOOLEAN' :
+                   'TEXT';
+      return `${key} ${type}`;
+    });
+    
+    return `CREATE TABLE IF NOT EXISTS api_data (
+      id SERIAL PRIMARY KEY,
+      ${columns.join(',\n      ')},
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`;
+  };
+
+  // Add visualization helper
+  const generateVisualization = (data: any) => {
+    // This would integrate with your preferred charting library
+    // For example, using Chart.js or D3.js
+    return {
+      type: 'bar', // or 'line', 'pie', etc.
+      data: {
+        labels: data.map((item: any) => item.label || ''),
+        datasets: [{
+          label: 'Value',
+          data: data.map((item: any) => item.value || 0)
+        }]
+      }
+    };
   };
 
   return (
