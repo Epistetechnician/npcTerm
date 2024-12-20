@@ -3,7 +3,8 @@ import type { Database } from '@/types/supabase'
 
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null
 
-export const createSupabaseClient = () => {
+export const createSupabaseClient = async () => {
+  if (typeof window === 'undefined') return null // Prevent server-side initialization
   if (supabaseInstance) return supabaseInstance
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -18,7 +19,7 @@ export const createSupabaseClient = () => {
     supabaseInstance = createClient<Database>(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: false,
-        autoRefreshToken: false
+        autoRefreshToken: false,
       }
     })
     return supabaseInstance
@@ -28,7 +29,7 @@ export const createSupabaseClient = () => {
   }
 }
 
-export const getSupabase = () => {
+export const getSupabase = async () => {
   if (!supabaseInstance) {
     return createSupabaseClient()
   }

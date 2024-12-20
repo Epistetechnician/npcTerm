@@ -1,33 +1,25 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import CabalTerminal from './agent'
-import { createSupabaseClient } from './utils/supabase'
+
+// Remove static generation
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 export default function Home() {
-  const [isSupabaseInitialized, setIsSupabaseInitialized] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createSupabaseClient()
-    if (supabase) {
-      setIsSupabaseInitialized(true)
-    } else {
-      setError('Supabase configuration is missing')
-    }
+    // Move initialization to client-side only
+    setIsLoading(false)
   }, [])
 
-  if (error) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-purple-400 mb-4">
-            Configuration Error
-          </h1>
-          <p className="text-gray-400">
-            {error}
-          </p>
+          <h2 className="text-xl text-purple-400">Loading...</h2>
         </div>
       </div>
     )

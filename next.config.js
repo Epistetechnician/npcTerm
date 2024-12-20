@@ -15,6 +15,7 @@ const nextConfig = {
     workerThreads: false,
     cpus: 1
   },
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   async headers() {
     return [
       {
