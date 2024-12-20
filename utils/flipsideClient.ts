@@ -1,3 +1,5 @@
+import { TokenMetrics } from '@/types/database';
+
 export interface FlipsideMetrics {
   volume24h?: number;
   fees24h?: number;
@@ -68,5 +70,48 @@ export class FlipsideClient {
   async getDerivativesMetrics(protocol: string): Promise<FlipsideMetrics> {
     // Implement Flipside API call
     return {};
+  }
+
+  async getTokenMetrics(address: string): Promise<TokenMetrics> {
+    try {
+      const query = `
+        WITH token_stats AS (
+          SELECT 
+            SUM(amount * price) as volume_24h,
+            COUNT(DISTINCT holder) as holders,
+            MAX(total_supply) as total_supply
+          FROM ethereum.token_transfers
+          WHERE token_address = '${address}'
+            AND block_timestamp >= NOW() - INTERVAL '24 HOURS'
+        )
+        SELECT * FROM token_stats;
+      `;
+
+      const result = await this.executeQuery(query);
+      return {
+        volume24h: result[0]?.volume_24h || 0,
+        holders: result[0]?.holders || 0,
+        totalSupply: result[0]?.total_supply || 0,
+        address: address,
+        symbol: '',
+        name: '',
+        price: 0,
+        marketCap: 0,
+        timestamp: new Date()
+      };
+    } catch (error) {
+      console.error(`Error fetching token metrics from Flipside for ${address}:`, error);
+      return {
+        address: address,
+        symbol: '',
+        name: '',
+        price: 0,
+        volume24h: 0,
+        marketCap: 0,
+        totalSupply: 0,
+        timestamp: new Date(),
+        holders: 0
+      };
+    }
   }
 } 

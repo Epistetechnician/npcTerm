@@ -10,12 +10,13 @@ import {
   generateCharts,
   aggregateProtocolData,
   trackBlockchainMetrics,
-  formatNumber,
-  type MetricData
+  formatNumber
 } from '@/utils/metrics'
 import { handleNaturalLanguageQuery } from '../utils/naturalLanguageQuery';
 import { getApiKeys } from '../utils/env';
 import { validateConfig } from '../config/env';
+import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/supabase'
 
 interface HistoryEntry {
   type: 'system' | 'user' | 'error' | 'ascii' | 'success' | 'chart' | 'link' | 'metric' | 'analytics' | 'protocol' | 'defi' | 'database' | 'table' | 'warning';
@@ -41,13 +42,26 @@ interface HistoryEntry {
   };
   analytics?: {
     source: string;
-    metrics: {
+    metrics: Array<{
       name: string;
-      value: any;
-      change?: string;
+      value: {
+        // Spot Market Data
+        price: number;
+        volume: number;
+        liquidity: number;
+        change: number;
+        // Perpetual Market Data
+        mark_price: number;
+        funding_rate: number;
+        perp_volume_24h: number;
+        open_interest: number;
+        // Market Stats
+        market_cap: number;
+        txns_24h: number;
+        total_supply: number;
+      };
       trend?: 'up' | 'down' | 'neutral';
-    }[];
-    charts?: any[];
+    }>;
   };
   protocol?: {
     name: string;
@@ -137,6 +151,7 @@ interface Commands {
   'ingest-api': (context: CommandContext) => Promise<HistoryEntry>;
   curl: (context: CommandContext) => Promise<HistoryEntry>;
   'visualize-data': (context: CommandContext) => Promise<HistoryEntry>;
+  'get-my-perps': (context: CommandContext) => Promise<HistoryEntry>;
 }
 
 // Add new interface for command suggestions
@@ -228,9 +243,9 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 const ASCII_LOGO = `
      █████╗ ██╗ ██████╗ █████╗ ██████  █████╗  ██╗     
     ██╔══██╗██║██╔════╝██╔══██╗██╔══██╗██╔══██╗ ██║     
-    ███████║█║██║     ███████║██████╔╝███████║ ██║                
+    ███████║█║██║     █████��█║██████╔╝██████╔╝ ██║                
     ██╔══██║██║██║     ██╔══██║██╔══██╗██╔══██║ ██║     
-    ██║  ██║██║╚█████╗██║  ██║█████╔╝██║  ██║     
+    ██║  ██║██║╚█████╗██║  ██║████╔╝██║  ██║     
     ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝ ╚╝
 `
 
@@ -389,6 +404,61 @@ const formatTableData = (data: Record<string, unknown>[]) => {
     }
   };
 };
+
+// First, update the PerpetualMetric interface
+interface PerpetualMetric {
+  id: number;
+  symbol: string;
+  timestamp: string;
+  funding_rate: number;
+  perp_volume_24h: number;
+  open_interest: number;
+  mark_price: number;
+  spot_price: number;
+  spot_volume_24h: number;
+  liquidity: number;
+  market_cap: number;
+  total_supply: number;
+  price_change_24h: number;
+  txns_24h: number;
+}
+
+// Update the Supabase client initialization
+const supabaseClient = (() => {
+  let instance: ReturnType<typeof createClient<Database>> | null = null;
+  
+  return () => {
+    if (!instance) {
+      instance = createClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+        process.env.NEXT_PUBLIC_SUPABASE_KEY || ''
+      );
+    }
+    return instance;
+  };
+})();
+
+// Use non-null assertion for Supabase client
+const supabase = supabaseClient()!;
+
+// Keep your MetricData interface definition
+interface MetricData {
+  name: string;
+  value: {
+    price: number;
+    volume: number;
+    liquidity: number;
+    change: number;
+    mark_price: number;
+    funding_rate: number;
+    perp_volume_24h: number;
+    open_interest: number;
+    market_cap: number;
+    txns_24h: number;
+    total_supply: number;
+  };
+  trend?: 'up' | 'down' | 'neutral';
+}
 
 const CabalTerminal = () => {
   const [history, setHistory] = useState<HistoryEntry[]>([
@@ -630,8 +700,8 @@ help          - Show this help message`
           type: 'system',
           content: `
 ╔════════════════════════════════════════╗
-║         CABAL CREATION WIZARD          ║
-╚════════════════════════════════════════╝
+║         CABAL CREATION WIZARD          ��
+╚═══════════════════════════════════════╝
 
 ${steps[0].prompt}
 
@@ -693,9 +763,9 @@ ${steps[currentStep].prompt}`
           return {
             type: 'success',
             content: `
-╔════════════════════════════════════════╗
+╔══════════════��═════════════════════════╗
 ║         CABAL CREATED SUCCESS          ║
-╚════════════════════════════════════════╝
+╚════════════════════���═══════════════════╝
 
 Name: ${newCabal}
 Description: ${newCreationData.description}
@@ -757,9 +827,9 @@ Type 'help' to see available commands.
         return {
           type: 'system',
           content: `
-╔═══════════════════════════════���════════╗
+╔════════════════════════════════════════╗
 ║         PROPOSAL CREATION WIZARD       ║
-╚══════════��═════════════════════════════╝
+╚══════════════════════════════════���═���═══╝
 
 Enter proposal title:
 
@@ -794,9 +864,9 @@ Tips:
       return {
         type: 'system',
         content: `
-╔════════════���══════════════���══════���═════╗
+╔════��═══════���══════════════�����══════���═════╗
 ║         AGENT INFORMATION              ║
-╚════════════════════════════════════════╝
+╚══════���═══════════════��═════════════════╝
 
 ID: ${agent.id}
 Name: ${agent.name}
@@ -837,9 +907,9 @@ Metrics:
       return {
         type: 'system',
         content: `
-╔═══════════════════════════════════════╗
+╔���══════════════════════════════════════╗
 ║         TREASURY OVERVIEW              ║
-╚══════════════════════════════════════╝
+╚═════════════════��════���═��═════════════╝
 
 DAO Tokens: ${treasury.daoTokens}
 PUMP Tokens: ${treasury.pumpTokens}
@@ -963,42 +1033,50 @@ ${message.length > 0 ? `"${message}"` : 'Please provide a message to interact wi
       };
     },
 
-    'query-defi': async (context: CommandContext) => {
+    'query-defi': async (context: CommandContext): Promise<HistoryEntry> => {
       const query = context.args.join(' ');
       if (!query) {
         return {
           type: 'error',
-          content: 'Please specify what DeFi data to query'
+          content: 'Please provide a query'
         };
       }
 
       try {
-        // Use both Dune and Flipside for comprehensive data
-        const duneClient = new DuneClient(process.env.NEXT_PUBLIC_DUNE_API_KEY!);
-        const flipsideClient = new FlipsideClient(process.env.NEXT_PUBLIC_FLIPSIDE_API_KEY!);
-
-        const [duneData, flipsideData] = await Promise.all([
-          duneClient.executeQuery(query),
-          flipsideClient.executeQuery(query)
-        ]);
+        // Transform your data to match the new MetricData structure
+        const defiData: MetricData[] = [
+          {
+            name: 'Total Value Locked',
+            value: {
+              price: 0,
+              volume: 0,
+              liquidity: 0,
+              change: 0,
+              mark_price: 0,
+              funding_rate: 0,
+              perp_volume_24h: 0,
+              open_interest: 0,
+              market_cap: 0,
+              txns_24h: 0,
+              total_supply: 0
+            },
+            trend: 'neutral'
+          }
+          // Add more metrics as needed
+        ];
 
         return {
           type: 'analytics',
-          content: 'DeFi Analysis Results',
+          content: `DeFi Metrics for "${query}"`,
           analytics: {
-            source: 'Multiple Sources',
-            metrics: [
-              ...formatDuneMetrics(duneData),
-              ...formatFlipsideMetrics(flipsideData)
-            ],
-            charts: generateCharts(duneData, flipsideData)
+            source: 'DeFi Query',
+            metrics: defiData
           }
         };
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      } catch (error) {
         return {
           type: 'error',
-          content: `Failed to query DeFi data: ${errorMessage}`
+          content: `Failed to query DeFi data: ${error instanceof Error ? error.message : 'Unknown error'}`
         };
       }
     },
@@ -1393,7 +1471,25 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
           content: `Failed to generate visualization: ${error instanceof Error ? error.message : 'Unknown error'}`
         };
       }
-    }
+    },
+
+    'get-my-perps': async (context: CommandContext) => {
+      try {
+        // Navigate to the perp metrics page
+        window.open('/perp-metrics', '_blank')
+        
+        return {
+          type: 'success',
+          content: 'Opening perpetual metrics dashboard in new tab...'
+        };
+      } catch (error) {
+        console.error('Error in get-my-perps:', error);
+        return {
+          type: 'error',
+          content: `Failed to open perpetual metrics dashboard: ${error instanceof Error ? error.message : 'Unknown error'}`
+        };
+      }
+    },
   }
 
   // Add clear command to commands object
@@ -1527,7 +1623,8 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
       { command: 'test-api', description: 'Test API endpoints directly in terminal' },
       { command: 'api-help', description: 'Show API testing documentation and examples' },
       { command: 'list-endpoints', description: 'List all available API endpoints with descriptions' },
-      { command: 'test-endpoint', description: 'Test a specific API endpoint' }
+      { command: 'test-endpoint', description: 'Test a specific API endpoint' },
+      { command: 'get-my-perps', description: 'Get my perpetual metrics' }
     ]
 
     if (!input) return commandList
@@ -1612,29 +1709,67 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
       case 'analytics':
         return (
           <div className="my-2 p-4 bg-gray-800/50 rounded-lg">
-            <h3 className="text-sm font-medium mb-2">{entry.content}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <h3 className="text-sm font-medium mb-4 text-purple-400">{entry.content}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {entry.analytics?.metrics.map((metric, i) => (
-                <div key={i} className="flex flex-col">
-                  <span className="text-gray-400 text-sm">{metric.name}</span>
-                  <span className="text-xl font-mono">{metric.value}</span>
-                  {metric.change && (
-                    <span className={`text-sm ${
-                      metric.trend === 'up' ? 'text-green-400' :
-                      metric.trend === 'down' ? 'text-red-400' :
-                      'text-gray-400'
+                <div key={i} className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50">
+                  {/* Token Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-lg font-bold text-white">{metric.name}</span>
+                    <span className={`text-sm px-2 py-1 rounded ${
+                      metric.value.change > 0 ? 'bg-green-500/20 text-green-400' :
+                      metric.value.change < 0 ? 'bg-red-500/20 text-red-400' :
+                      'bg-gray-500/20 text-gray-400'
                     }`}>
-                      {metric.change}
+                      {metric.value.change > 0 ? '↑' : metric.value.change < 0 ? '↓' : '→'} 
+                      {Math.abs(metric.value.change).toFixed(2)}%
                     </span>
-                  )}
+                  </div>
+
+                  {/* Market Data */}
+                  <div className="space-y-4">
+                    {/* Spot Market */}
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-purple-400">Spot Market</div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="text-gray-400">Price:</div>
+                        <div className="text-right font-mono text-white">${metric.value.price.toFixed(4)}</div>
+                        <div className="text-gray-400">Volume:</div>
+                        <div className="text-right font-mono text-white">${formatNumber(metric.value.volume)}</div>
+                        <div className="text-gray-400">Liquidity:</div>
+                        <div className="text-right font-mono text-white">${formatNumber(metric.value.liquidity)}</div>
+                      </div>
+                    </div>
+
+                    {/* Perp Market */}
+                    <div className="space-y-2 border-t border-gray-700/50 pt-2">
+                      <div className="text-sm font-medium text-purple-400">Perpetual Market</div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="text-gray-400">Mark Price:</div>
+                        <div className="text-right font-mono text-white">${metric.value.mark_price.toFixed(4)}</div>
+                        <div className="text-gray-400">Funding Rate:</div>
+                        <div className="text-right font-mono text-white">{(metric.value.funding_rate * 100).toFixed(4)}%</div>
+                        <div className="text-gray-400">Volume:</div>
+                        <div className="text-right font-mono text-white">${formatNumber(metric.value.perp_volume_24h)}</div>
+                        <div className="text-gray-400">Open Interest:</div>
+                        <div className="text-right font-mono text-white">${formatNumber(metric.value.open_interest)}</div>
+                      </div>
+                    </div>
+
+                    {/* Market Stats */}
+                    <div className="space-y-2 border-t border-gray-700/50 pt-2">
+                      <div className="text-sm font-medium text-purple-400">Market Stats</div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="text-gray-400">Market Cap:</div>
+                        <div className="text-right font-mono text-white">${formatNumber(metric.value.market_cap)}</div>
+                        <div className="text-gray-400">Transactions:</div>
+                        <div className="text-right font-mono text-white">{formatNumber(metric.value.txns_24h)}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-            {entry.analytics?.charts && (
-              <div className="mt-4">
-                {/* Add chart rendering component */}
-              </div>
-            )}
           </div>
         );
 
