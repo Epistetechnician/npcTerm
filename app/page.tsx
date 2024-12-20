@@ -1,36 +1,36 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import CabalTerminal from './agent'
-
-// Add error handling for Supabase initialization
-const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_KEY
-  ? createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_KEY,
-      {
-        auth: {
-          persistSession: false
-        }
-      }
-    )
-  : null;
+import { createSupabaseClient } from './utils/supabase'
 
 export default function Home() {
-  // Add fallback UI if Supabase is not initialized
-  if (!supabase) {
+  const [isSupabaseInitialized, setIsSupabaseInitialized] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createSupabaseClient()
+    if (supabase) {
+      setIsSupabaseInitialized(true)
+    } else {
+      setError('Supabase configuration is missing')
+    }
+  }, [])
+
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-purple-400 mb-4">
-            Configuration Required
+            Configuration Error
           </h1>
           <p className="text-gray-400">
-            Please check your environment variables for Supabase configuration.
+            {error}
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
