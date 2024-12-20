@@ -7,6 +7,7 @@
     "build": "DISABLE_ESLINT_PLUGIN=true NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "clean": "rm -rf .next && rm -rf node_modules && yarn install",
     "ingest": "ts-node scripts/ingestAndStore.ts",
     "scheduler": "ts-node scripts/scheduler.ts",

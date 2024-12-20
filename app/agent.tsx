@@ -242,8 +242,8 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 
 const ASCII_LOGO = `
      █████╗ ██╗ ██████╗ █████╗ ██████  █████╗  ██╗     
-    ██╔══██╗██║██╔════╝██╔══██╗█��╔══██╗██╔══██╗ ██║     
-    ███████║█║██║     █████��█║██████╔╝██████╔╝ ██║                
+    ██╔══██╗██║██╔════╝██╔══██╗██╔══██╗██╔══██╗ ██║     
+    ███████║█║██║     █████║██████╔╝██████╔╝ ██║                
     ██╔══██║██║██║     ██╔══██║██╔══██╗██╔══██║ ██║     
     ██║  ██║██║╚█████╗██║  ██║████╔╝██║  ██║     
     ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝ ╚╝
@@ -700,7 +700,7 @@ help          - Show this help message`
           type: 'system',
           content: `
 ╔════════════════════════════════════════╗
-║         CABAL CREATION WIZARD          ��
+║         CABAL CREATION WIZARD          
 ╚═══════════════════════════════════════╝
 
 ${steps[0].prompt}
@@ -1578,18 +1578,16 @@ Example: test-endpoint getProtocolMetrics {"name": "aave"}`
 
   // Update click handler to be more selective
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      // Only focus if clicking inside the terminal container
-      if (terminalRef.current?.contains(e.target as Node)) {
-        inputRef.current?.focus()
+    const handleClickOutside = (event: MouseEvent) => {
+      if (terminalRef.current && !terminalRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
       }
     }
 
-    // Add click handler to terminal container only
-    terminalRef.current?.addEventListener('click', handleClick)
+    document.addEventListener('mousedown', handleClickOutside)
     
     return () => {
-      terminalRef.current?.removeEventListener('click', handleClick)
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
 

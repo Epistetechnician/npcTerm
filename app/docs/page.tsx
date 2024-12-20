@@ -1,11 +1,32 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Book, Code, Database, FileText, GitBranch, Terminal } from 'lucide-react';
+import { Book, Code, Database, FileText } from 'lucide-react';
+
+// Add interfaces for document types
+interface DocEndpoint {
+  path: string;
+  method: string;
+}
+
+interface DocExample {
+  title: string;
+  language: string;
+}
+
+interface Doc {
+  type: 'api' | 'guide' | 'reference';
+  category: string;
+  metadata?: {
+    description?: string;
+  };
+  endpoints?: DocEndpoint[];
+  examples?: DocExample[];
+}
 
 interface DocState {
   loading: boolean;
-  docs: any;
+  docs: Record<string, Doc>;
   activeCategory: string;
   activeType: string;
 }
@@ -18,20 +39,22 @@ export default function DocsPage() {
     activeType: 'all'
   });
   
-  const categories = ['All', 'DeFi', 'Analytics', 'GraphQL', 'NFTs', 'Infrastructure'];
-  const types = [
-    { id: 'all', label: 'All', icon: FileText },
-    { id: 'api', label: 'APIs', icon: Database },
-    { id: 'guide', label: 'Guides', icon: Book },
-    { id: 'reference', label: 'Reference', icon: Code }
-  ];
+  const categories = React.useMemo(() => {
+    return Array.from(new Set(Object.values(state.docs).map((doc: Doc) => doc.category)))
+  }, [state.docs])
+
+  const types = React.useMemo(() => {
+    return Array.from(new Set(Object.values(state.docs).map((doc: Doc) => doc.type)))
+  }, [state.docs])
 
   const filteredDocs = React.useMemo(() => {
-    let filtered = { ...state.docs };
-    
- 
-    return filtered;
-  }, [state.docs, state.activeCategory, state.activeType]);
+    const entries = Object.entries(state.docs)
+    return entries.filter(([_, doc]: [string, Doc]) => {
+      if (state.activeCategory && doc.category !== state.activeCategory) return false
+      if (state.activeType && doc.type !== state.activeType) return false
+      return true
+    })
+  }, [state.docs, state.activeCategory, state.activeType])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black">
@@ -91,7 +114,7 @@ export default function DocsPage() {
       {/* Documentation Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {Object.entries(filteredDocs).map(([name, doc]: [string, any]) => (
+          {filteredDocs.map(([name, doc]: [string, Doc]) => (
             <div key={name} className="bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden hover:border-purple-500/50 transition-colors">
               <div className="p-6">
                 <div className="flex items-center gap-4 mb-4">
@@ -112,7 +135,7 @@ export default function DocsPage() {
                   <div className="mt-4">
                     <h3 className="text-sm font-medium text-gray-400 mb-2">Endpoints</h3>
                     <div className="space-y-2">
-                      {doc.endpoints.slice(0, 3).map((endpoint: any) => (
+                      {doc.endpoints.slice(0, 3).map((endpoint: DocEndpoint) => (
                         <div key={endpoint.path} className="text-sm">
                           <code className="text-purple-400">{endpoint.method} {endpoint.path}</code>
                         </div>
@@ -128,7 +151,7 @@ export default function DocsPage() {
                   <div className="mt-4">
                     <h3 className="text-sm font-medium text-gray-400 mb-2">Examples</h3>
                     <div className="space-y-2">
-                      {doc.examples.slice(0, 2).map((example: any, index: number) => (
+                      {doc.examples.slice(0, 2).map((example: DocExample, index: number) => (
                         <div key={index} className="text-sm">
                           <p className="text-gray-400">{example.title}</p>
                           <code className="text-xs text-gray-500">{example.language}</code>
