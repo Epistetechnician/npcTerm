@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react'
 import { Terminal as LucideTerminal, Send, X, Maximize2, Minimize2, Network } from 'lucide-react'
 import { DuneClient } from '@/utils/duneClient'
 import { FlipsideClient } from '@/utils/flipsideClient'
@@ -193,7 +193,7 @@ interface ApiConfig {
 
 // Update the API_ENDPOINTS configuration
 const getApiConfig = (): ApiConfig => {
-  const duneApiKey = process.env.NEXT_PUBLIC_DUNE_API_KEY;
+  const duneApiKey = process.env.NEXT_PUBLIC_DUNE_API_KEY as string;
   if (!duneApiKey) {
     throw new Error('NEXT_PUBLIC_DUNE_API_KEY is not configured');
   }
@@ -242,7 +242,7 @@ const API_ENDPOINTS: ApiEndpoint[] = [
 
 const ASCII_LOGO = `
      █████╗ ██╗ ██████╗ █████╗ ██████  █████╗  ██╗     
-    ██╔══██╗██║██╔════╝██╔══██╗██╔══██╗██╔══██╗ ██║     
+    ██╔══██╗██║██╔════╝██╔══██╗█��╔══██╗██╔══██╗ ██║     
     ███████║█║██║     █████��█║██████╔╝██████╔╝ ██║                
     ██╔══██║██║██║     ██╔══██║██╔══██╗██╔══██║ ██║     
     ██║  ██║██║╚█████╗██║  ██║████╔╝██║  ██║     
@@ -829,7 +829,7 @@ Type 'help' to see available commands.
           content: `
 ╔════════════════════════════════════════╗
 ║         PROPOSAL CREATION WIZARD       ║
-╚══════════════════════════════════���═���═══╝
+╚═══════════════════���══════════════���═���═══╝
 
 Enter proposal title:
 
@@ -864,7 +864,7 @@ Tips:
       return {
         type: 'system',
         content: `
-╔════��═══════���══════════════�����══════���═════╗
+╔════��═══════���══════════════�����══════���═════��
 ║         AGENT INFORMATION              ║
 ╚══════���═══════════════��═════════════════╝
 
@@ -907,7 +907,7 @@ Metrics:
       return {
         type: 'system',
         content: `
-╔���══════════════════════════════════════╗
+╔���══════════════════════════════════════���
 ║         TREASURY OVERVIEW              ║
 ╚═════════════════��════���═��═════════════╝
 

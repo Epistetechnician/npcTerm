@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, Dispatch, SetStateAction } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, CartesianGrid } from 'recharts'
@@ -86,13 +86,19 @@ const metricOptions: MetricOption[] = [
   }
 ];
 
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY!
-)
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_KEY 
+  ? createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_KEY
+    )
+  : null;
 
 // Add TimeRange type at the top with other type definitions
 type TimeRange = '1H' | '4H' | '12H' | '24H';
+
+// Add proper types for state setters
+type SetMetricsType = Dispatch<SetStateAction<PerpMetric[]>>;
+type SetHistoricalDataType = Dispatch<SetStateAction<PerpMetric[]>>;
 
 export default function PerpMetricsPage() {
   const [metrics, setMetrics] = useState<PerpMetric[]>([])
@@ -133,6 +139,11 @@ export default function PerpMetricsPage() {
   }, [metrics])
 
   async function fetchMetrics() {
+    if (!supabase) {
+      console.error('Supabase client not initialized');
+      setLoading(false);
+      return;
+    }
     try {
       const { data: latest, error: latestError } = await supabase
         .from('perpetual_metrics')
@@ -143,9 +154,9 @@ export default function PerpMetricsPage() {
 
       if (latest) {
         // Group by symbol and get latest for each
-        const latestBySymbol = latest.reduce<Record<string, PerpMetric>>((acc, curr) => {
+        const latestBySymbol = latest.reduce<Record<string, PerpMetric>>((acc: Record<string, PerpMetric>, curr: PerpMetric) => {
           if (!acc[curr.symbol] || new Date(curr.timestamp) > new Date(acc[curr.symbol].timestamp)) {
-            acc[curr.symbol] = curr as PerpMetric;
+            acc[curr.symbol] = curr;
           }
           return acc;
         }, {});

@@ -1,8 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import React from 'react';
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "AIAPICaba!",
@@ -10,7 +16,6 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
-  viewport: "width=device-width, initial-scale=1",
   keywords: "API, blockchain, data analytics, terminal",
   authors: [{ name: "npc Team" }],
   openGraph: {

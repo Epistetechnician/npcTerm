@@ -7,9 +7,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  experimental: {
-    appDir: true,
-  },
   async headers() {
     return [
       {
@@ -23,13 +20,11 @@ const nextConfig = {
       }
     ]
   },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        punycode: false,
-      };
-    }
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      punycode: false,
+    };
     return config;
   },
 }
